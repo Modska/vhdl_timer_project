@@ -18,35 +18,54 @@ end entity timer;
 
 architecture rtl of timer is
     -- Calculate how many cycles the timer should count
+    -- Handles edge cases: zero delay, sub-clock delays, very long delays
     function calc_cycles_to_count return natural is
         variable delay_ns : real;
         variable cycles   : real;
+        variable result   : natural;
     begin
         if delay_g = 0 ns then
             return 0;
         end if;
         
+        -- Convert time to nanoseconds
         delay_ns := real(delay_g / 1 ns);
+        
+        -- Calculate number of cycles
         cycles := real(clk_freq_hz_g) * (delay_ns / 1.0e9);
         
-        return integer(round(cycles));
+        -- Round to nearest integer
+        result := integer(round(cycles));
+        
+        -- Handle sub-clock period delays: ensure at least 1 cycle if delay > 0
+        if result = 0 and delay_g > 0 ns then
+            result := 1;
+        end if;
+        
+        return result;
     end function;
     
     constant CYCLES_TO_COUNT : natural := calc_cycles_to_count;
     
-    signal count : natural := 0;
+    signal count    : natural := 0;
     signal counting : boolean := false;
     
 begin
+    -- Parameter validation
     assert clk_freq_hz_g > 0 
-        report "Frequency must be greater than zero!" 
+        report "Clock frequency must be greater than zero!" 
         severity failure;
 
     assert delay_g >= 0 ns 
         report "Delay cannot be negative!" 
         severity failure;
     
-    -- Output logic
+    -- Informational assertion for very long delays
+    assert CYCLES_TO_COUNT < 2**30
+        report "Warning: Very long delay may cause overflow issues"
+        severity warning;
+    
+    -- Output assignment
     done_o <= '0' when counting else '1';
     
     process(clk_i, arst_i)
@@ -57,16 +76,20 @@ begin
             
         elsif rising_edge(clk_i) then
             if not counting then
-                -- Idle state
+                -- Idle state: waiting for start pulse
+                -- Note: start_i can stay high for multiple cycles,
+                -- but we only trigger once
                 if start_i = '1' and CYCLES_TO_COUNT > 0 then
-                    -- Start counting from 0
                     count    <= 0;
                     counting <= true;
                 end if;
+                -- If CYCLES_TO_COUNT = 0 (zero delay case),
+                -- we stay in idle with done_o = '1'
+                
             else
                 -- Counting state
                 if count = CYCLES_TO_COUNT - 1 then
-                    -- Finished counting
+                    -- Finished counting: return to idle
                     count    <= 0;
                     counting <= false;
                 else
