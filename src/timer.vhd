@@ -24,6 +24,7 @@ architecture rtl of timer is
         variable cycles   : real;
         variable result   : natural;
     begin
+        -- Special case: zero delay means no counting at all
         if delay_g = 0 ns then
             return 0;
         end if;
@@ -31,13 +32,14 @@ architecture rtl of timer is
         -- Convert time to nanoseconds
         delay_ns := real(delay_g / 1 ns);
         
-        -- Calculate number of cycles
+        -- Calculate number of cycles: frequency * time_in_seconds
         cycles := real(clk_freq_hz_g) * (delay_ns / 1.0e9);
         
         -- Round to nearest integer
         result := integer(round(cycles));
         
-        -- Handle sub-clock period delays: ensure at least 1 cycle if delay > 0
+        -- Critical: For sub-clock period delays, ensure at least 1 cycle
+        -- A synchronous counter cannot count less than one clock period
         if result = 0 and delay_g > 0 ns then
             result := 1;
         end if;
@@ -46,6 +48,9 @@ architecture rtl of timer is
     end function;
     
     constant CYCLES_TO_COUNT : natural := calc_cycles_to_count;
+    
+    -- Calculate the actual delay that will be achieved
+    constant ACTUAL_DELAY : time := (CYCLES_TO_COUNT * 1 sec) / clk_freq_hz_g;
     
     signal count    : natural := 0;
     signal counting : boolean := false;
@@ -60,10 +65,17 @@ begin
         report "Delay cannot be negative!" 
         severity failure;
     
-    -- Informational assertion for very long delays
+    -- Informational warnings
     assert CYCLES_TO_COUNT < 2**30
         report "Warning: Very long delay may cause overflow issues"
         severity warning;
+    
+    assert (delay_g = 0 ns) or (ACTUAL_DELAY >= delay_g * 0.95)
+        report "Warning: Requested delay " & time'image(delay_g) & 
+               " will be implemented as " & time'image(ACTUAL_DELAY) &
+               " (" & integer'image(CYCLES_TO_COUNT) & " cycles)" &
+               " due to clock granularity"
+        severity note;
     
     -- Output assignment
     done_o <= '0' when counting else '1';

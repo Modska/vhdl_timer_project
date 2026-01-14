@@ -63,8 +63,16 @@ begin
                     measured_delay := now - start_time;
                     
                     -- Check accuracy
-                    check_equal(measured_delay, DELAY_TIME, "Accuracy mismatch");
-                    info("Measured delay: " & time'image(measured_delay));
+                    -- For sub-clock period delays, accept one clock period as minimum
+                    if DELAY_TIME < CLK_PERIOD then
+                        check_equal(measured_delay, CLK_PERIOD, 
+                                   "Sub-clock delay should round to 1 cycle");
+                        info("Sub-clock delay " & time'image(DELAY_TIME) & 
+                             " rounded to " & time'image(measured_delay));
+                    else
+                        check_equal(measured_delay, DELAY_TIME, "Accuracy mismatch");
+                        info("Measured delay: " & time'image(measured_delay));
+                    end if;
                 else
                     info("Skipping Accuracy test for 0ns delay");
                 end if;
