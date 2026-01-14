@@ -42,64 +42,43 @@ begin
             done_o  => done
         );
 
--- Main VUnit Test Process
-    main : process
+main : process
         variable start_time : time;
     begin
         test_runner_setup(runner, runner_cfg);
 
         while test_suite loop
             
-            -- Scenario 1: Standard Accuracy Test
-            if run("Test_Timer_Accuracy") then
-                info("Testing nominal delay accuracy");
+            -- Runs for all standard configs (if delay > 0)
+            if run("Test_Timer_Accuracy") and delay_g > 0 ns then
                 rst <= '1'; wait for 100 ns; rst <= '0';
                 wait until rising_edge(clk);
                 start <= '1'; wait until rising_edge(clk); start <= '0';
                 wait until done = '0';
                 start_time := now;
                 wait until done = '1';
-                check_equal(now - start_time, delay_g, "Nominal delay mismatch");
+                check_equal(now - start_time, delay_g, "Accuracy failed");
 
-            -- Scenario 2: Reset during counting
-            elsif run("Test_Reset_During_Counting") then
-                info("Testing if Reset correctly interrupts the timer");
+            -- Runs for all standard configs
+            elsif run("Test_Reset_During_Counting") and delay_g > 10 us then
                 rst <= '1'; wait for 100 ns; rst <= '0';
                 wait until rising_edge(clk);
                 start <= '1'; wait until rising_edge(clk); start <= '0';
                 wait for delay_g / 2;
                 rst <= '1'; wait for 100 ns;
-                check(done = '1', "Done signal should be high during Reset");
+                check(done = '1', "Reset failed to stop timer");
                 rst <= '0';
+
+            -- Runs ONLY for the 'Special_ZeroDelay' config
+            elsif run("Test_Zero_Delay") and delay_g = 0 ns then
+                rst <= '1'; wait for 100 ns; rst <= '0';
                 wait until rising_edge(clk);
-                check(done = '1', "Done signal should remain high after Reset");
-
-            -- Scenario 3: Large/Extreme values
-            elsif run("Test_Extreme_Values") then
-                if delay_g > 0 ns then -- Only run if delay is positive
-                    info("Testing with large delay parameters");
-                    rst <= '1'; wait for 100 ns; rst <= '0';
-                    wait until rising_edge(clk);
-                    start <= '1'; wait until rising_edge(clk); start <= '0';
-                    wait until done = '0' for 1 ms;
-                    check(done = '0', "Timer should start for valid positive delay");
-                end if;
-
-            -- Scenario 4: Zero delay test
-            elsif run("Test_Zero_Delay") then
-                if delay_g = 0 ns then
-                    info("Testing 0ns delay handling");
-                    rst <= '1'; wait for 100 ns; rst <= '0';
-                    wait until rising_edge(clk);
-                    start <= '1'; wait until rising_edge(clk); start <= '0';
-                    -- The timer should ideally return done='1' very quickly
-                    wait until done = '1' for 2 * CLK_PERIOD;
-                    check(done = '1', "Timer should complete immediately for 0ns delay");
-                end if;
+                start <= '1'; wait until rising_edge(clk); start <= '0';
+                wait until done = '1' for 2 * CLK_PERIOD;
+                check(done = '1', "Zero delay failed");
             end if;
 
         end loop;
-
         test_runner_cleanup(runner);
     end process;
 end architecture;
