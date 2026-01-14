@@ -1,33 +1,14 @@
-name: VHDL Timer CI
-
-# Déclenche le test à chaque push ou demande de fusion (PR)
-on: [push, pull_request]
-
+name: VHDL_CI
+on: [push]
 jobs:
-  simulation:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Récupère votre code depuis le dépôt GitHub
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # 2. Installe Python (nécessaire pour VUnit)
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      # 3. Installe GHDL (le simulateur VHDL)
-      - name: Install GHDL
+      - uses: actions/checkout@v4
+      - name: Install Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y ghdl
-
-      # 4. Installe VUnit (la bibliothèque de test)
-      - name: Install VUnit
-        run: pip install vunit_hdl
-
-      # 5. Lance les tests via votre script run.py
-      - name: Run VUnit tests
+          pip install vunit_hdl
+      - name: Run Simulation
         run: python run.py
