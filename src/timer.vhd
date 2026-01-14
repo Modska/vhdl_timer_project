@@ -18,13 +18,18 @@ entity timer is
 
 architecture rtl of timer is
     -- Calculate the cycle limit 
-    -- Assumption: clk_freq * delay fits within a 31-bit positive integer (VHDL natural limit)
+    -- Use nanoseconds for intermediate calculation to prevent integer division issues
     constant MAX_COUNT : natural := (clk_freq_hz_g / 1_000_000) * (delay_g / 1 ns) / 1_000;    
     -- Counter register
     signal count_reg : natural range 0 to MAX_COUNT := 0;
-    
 begin
+    assert clk_freq_hz_g > 0 
+        report "Frequency must be greater than zero!" 
+        severity failure;
 
+    assert delay_g >= 0 ns 
+        report "Delay cannot be negative!" 
+        severity failure;
     process(clk_i, arst_i)
     begin
         if arst_i = '1' then
