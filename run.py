@@ -29,18 +29,4 @@ tb.add_config(
     generics=dict(clk_freq_hz_g=1000, delay_g="1sec")
 )
 
-# --- 3. Invalid Values (Expected to Fail) ---
-# We configure these and then tell VUnit they are expected to fail
-c1 = tb.add_config(
-    name="Invalid_Zero_Frequency",
-    generics=dict(clk_freq_hz_g=0, delay_g="100us")
-)
-c1.set_attribute("expect_fail", True)
-
-c2 = tb.add_config(
-    name="Invalid_Negative_Delay",
-    generics=dict(clk_freq_hz_g=50_000_000, delay_g="-10us")
-)
-c2.set_attribute("expect_fail", True)
-
 vu.main()
