@@ -1,7 +1,7 @@
 from vunit import VUnit
 from vunit.sim_if.ghdl import GHDLInterface
 
-# Fix for GHDL "Dunoon" version detection
+# Force mcode backend for GHDL compatibility
 def forced_determine_backend(prefix):
     return "mcode"
 GHDLInterface.determine_backend = staticmethod(forced_determine_backend)
@@ -15,7 +15,7 @@ lib.add_source_files("tb/*.vhd")
 
 tb = lib.test_bench("tb_timer")
 
-# --- Standard Scenarios ---
+# --- 1. Standard Scenarios ---
 for freq in [50_000_000, 100_000_000]:
     for delay in ["100us", "50us"]:
         tb.add_config(
@@ -23,24 +23,24 @@ for freq in [50_000_000, 100_000_000]:
             generics=dict(clk_freq_hz_g=freq, delay_g=delay)
         )
 
-# --- Edge Cases (Large Values) ---
+# --- 2. Edge Case (Long Delay) ---
 tb.add_config(
     name="Edge_SlowClock_LongDelay",
     generics=dict(clk_freq_hz_g=1000, delay_g="1sec")
 )
 
-# --- Invalid Values (Fixed Syntax) ---
-# We use attributes={'expect_fail': True} for modern VUnit versions
-tb.add_config(
+# --- 3. Invalid Values (Expected to Fail) ---
+# We configure these and then tell VUnit they are expected to fail
+c1 = tb.add_config(
     name="Invalid_Zero_Frequency",
-    generics=dict(clk_freq_hz_g=0, delay_g="100us"),
-    attributes={'expect_fail': True} 
+    generics=dict(clk_freq_hz_g=0, delay_g="100us")
 )
+c1.set_attribute("expect_fail", True)
 
-tb.add_config(
+c2 = tb.add_config(
     name="Invalid_Negative_Delay",
-    generics=dict(clk_freq_hz_g=50_000_000, delay_g="-10us"),
-    attributes={'expect_fail': True}
+    generics=dict(clk_freq_hz_g=50_000_000, delay_g="-10us")
 )
+c2.set_attribute("expect_fail", True)
 
 vu.main()
