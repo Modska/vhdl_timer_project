@@ -49,9 +49,6 @@ architecture rtl of timer is
     
     constant CYCLES_TO_COUNT : natural := calc_cycles_to_count;
     
-    -- Calculate the actual delay that will be achieved
-    constant ACTUAL_DELAY : time := (CYCLES_TO_COUNT * 1 sec) / clk_freq_hz_g;
-    
     signal count    : natural := 0;
     signal counting : boolean := false;
     
@@ -70,11 +67,11 @@ begin
         report "Warning: Very long delay may cause overflow issues"
         severity warning;
     
-    assert (delay_g = 0 ns) or (ACTUAL_DELAY >= delay_g * 0.95)
-        report "Warning: Requested delay " & time'image(delay_g) & 
-               " will be implemented as " & time'image(ACTUAL_DELAY) &
-               " (" & integer'image(CYCLES_TO_COUNT) & " cycles)" &
-               " due to clock granularity"
+    -- Info message for sub-clock period delays
+    assert (delay_g = 0 ns) or (CYCLES_TO_COUNT > 0)
+        report "Note: Delay " & time'image(delay_g) & 
+               " will be implemented with " & integer'image(CYCLES_TO_COUNT) & 
+               " clock cycles"
         severity note;
     
     -- Output assignment
