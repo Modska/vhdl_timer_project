@@ -19,7 +19,7 @@ entity timer is
 architecture rtl of timer is
     -- Calculate the cycle limit 
     -- Use nanoseconds for intermediate calculation to prevent integer division issues
-    constant MAX_COUNT : natural := (clk_freq_hz_g / 1_000_000) * (delay_g / 1 ns) / 1_000;    
+    constant MAX_COUNT : natural := (clk_freq_hz_g * (delay_g / 1 ns)) / 1_000_000_000;
     -- Counter register
     signal count_reg : natural range 0 to MAX_COUNT := 0;
 begin

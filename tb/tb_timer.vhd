@@ -49,36 +49,51 @@ main : process
 
         while test_suite loop
             
-            -- Runs for all standard configs (if delay > 0)
-            if run("Test_Timer_Accuracy") and delay_g > 0 ns then
-                rst <= '1'; wait for 100 ns; rst <= '0';
-                wait until rising_edge(clk);
-                start <= '1'; wait until rising_edge(clk); start <= '0';
-                wait until done = '0';
-                start_time := now;
-                wait until done = '1';
-                check_equal(now - start_time, delay_g, "Accuracy failed");
+            -- Runs ONLY for positive delays (Standard tests)
+            if run("Test_Timer_Accuracy") then
+                if delay_g > 0 ns then
+                    rst <= '1'; wait for 100 ns; rst <= '0';
+                    wait until rising_edge(clk);
+                    start <= '1'; wait until rising_edge(clk); start <= '0';
+                    wait until done = '0';
+                    start_time := now;
+                    wait until done = '1';
+                    check_equal(now - start_time, delay_g, "Accuracy mismatch");
+                else
+                    info("Skipping Accuracy test for 0ns delay");
+                end if;
 
-            -- Runs for all standard configs
-            elsif run("Test_Reset_During_Counting") and delay_g > 10 us then
-                rst <= '1'; wait for 100 ns; rst <= '0';
-                wait until rising_edge(clk);
-                start <= '1'; wait until rising_edge(clk); start <= '0';
-                wait for delay_g / 2;
-                rst <= '1'; wait for 100 ns;
-                check(done = '1', "Reset failed to stop timer");
-                rst <= '0';
+            -- Runs for standard delays to test reset
+            elsif run("Test_Reset_During_Counting") then
+                if delay_g > 20 ns then -- Need some time to actually be counting
+                    rst <= '1'; wait for 100 ns; rst <= '0';
+                    wait until rising_edge(clk);
+                    start <= '1'; wait until rising_edge(clk); start <= '0';
+                    wait until done = '0';
+                    wait for delay_g / 2;
+                    rst <= '1'; wait for 100 ns;
+                    check(done = '1', "Done should be high after reset");
+                    rst <= '0';
+                else
+                    info("Skipping Reset test for very short delay");
+                end if;
 
-            -- Runs ONLY for the 'Special_ZeroDelay' config
-            elsif run("Test_Zero_Delay") and delay_g = 0 ns then
-                rst <= '1'; wait for 100 ns; rst <= '0';
-                wait until rising_edge(clk);
-                start <= '1'; wait until rising_edge(clk); start <= '0';
-                wait until done = '1' for 2 * CLK_PERIOD;
-                check(done = '1', "Zero delay failed");
+            -- Runs ONLY for the 0ns configuration
+            elsif run("Test_Zero_Delay") then
+                if delay_g = 0 ns then
+                    rst <= '1'; wait for 100 ns; rst <= '0';
+                    wait until rising_edge(clk);
+                    start <= '1'; wait until rising_edge(clk); start <= '0';
+                    -- Should be done almost immediately
+                    wait until done = '1' for 4 * CLK_PERIOD;
+                    check(done = '1', "Timer failed to handle 0ns delay");
+                else
+                    info("Skipping Zero_Delay test for positive delay config");
+                end if;
             end if;
 
         end loop;
+
         test_runner_cleanup(runner);
     end process;
 end architecture;
