@@ -29,18 +29,18 @@ tb.add_config(
     generics=dict(clk_freq_hz_g=1000, delay_g="1sec")
 )
 
-# --- Invalid Values (Expected to Fail) ---
-# These will pass in GitHub Actions if the simulation CRASHES as expected
+# --- Invalid Values (Fixed Syntax) ---
+# We use attributes={'expect_fail': True} for modern VUnit versions
 tb.add_config(
     name="Invalid_Zero_Frequency",
     generics=dict(clk_freq_hz_g=0, delay_g="100us"),
-    expect_fail=True 
+    attributes={'expect_fail': True} 
 )
 
 tb.add_config(
     name="Invalid_Negative_Delay",
     generics=dict(clk_freq_hz_g=50_000_000, delay_g="-10us"),
-    expect_fail=True
+    attributes={'expect_fail': True}
 )
 
 vu.main()
