@@ -2,30 +2,29 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
--- Bibliothèques VUnit
 library vunit_lib;
 context vunit_lib.vunit_context;
 
 entity tb_timer is
-    generic (runner_cfg : string); -- VUnit injecte la configuration ici
+    generic (runner_cfg : string);
 end entity;
 
 architecture sim of tb_timer is
-    -- Signaux pour relier au timer
+    -- Signals
     signal clk   : std_logic := '0';
     signal rst   : std_logic := '0';
     signal start : std_logic := '0';
     signal done  : std_logic;
 
-    -- Paramètres du test (ex: 50MHz, 100 microsecondes)
-    constant CLK_PERIOD : time := 20 ns; -- 50 MHz
+    -- Test parameters
+    constant CLK_PERIOD : time := 20 ns; 
     constant DELAY_VAL  : time := 100 us;
 begin
 
-    -- 1. Génération de l'horloge
+    -- Clock generation
     clk <= not clk after CLK_PERIOD / 2;
 
-    -- 2. Instanciation du Timer (UUT : Unit Under Test)
+    -- UUT Instantiation
     uut: entity work.timer
         generic map (
             clk_freq_hz_g => 50_000_000,
@@ -38,35 +37,34 @@ begin
             done_o  => done
         );
 
-    -- 3. Processus de test VUnit
+    -- Main Test Process
     main : process
         variable start_time : time;
     begin
         test_runner_setup(runner, runner_cfg);
 
         while test_suite loop
-            if run("Test du délai nominal") then
-                -- Initialisation
+            if run("Test_nominal_delay") then 
+                -- Reset
                 rst <= '1';
                 wait for 100 ns;
                 rst <= '0';
                 wait until rising_edge(clk);
 
-                -- Lancement du timer
+                -- Start
                 start <= '1';
                 wait until rising_edge(clk);
                 start <= '0';
                 
-                -- On note quand ça commence (done passe à 0)
+                -- Detect falling edge (start of counting)
                 wait until done = '0';
                 start_time := now;
 
-                -- On attend la fin (done repasse à 1)
+                -- Detect rising edge (end of counting)
                 wait until done = '1';
                 
-                -- Vérification VUnit (Self-checking)
-                check_equal(now - start_time, DELAY_VAL, "Erreur: Le délai ne correspond pas !");
-            
+                -- Check result
+                check_equal(now - start_time, DELAY_VAL, "Delay_Mismatch");
             end if;
         end loop;
 
