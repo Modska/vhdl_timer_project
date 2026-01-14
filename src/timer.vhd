@@ -17,36 +17,27 @@ entity timer is
 end entity timer;
 
 architecture rtl of timer is
-    -- Calculate the cycle limit
-    -- Convert delay to nanoseconds, multiply by frequency, then divide by 1e9
-    -- This gives us the number of clock cycles needed
-    function calc_max_count return natural is
+    -- Calculate how many cycles to count
+    -- The duration while done='0' should be exactly delay_g
+    function calc_cycles_to_count return natural is
         variable delay_ns : real;
         variable cycles   : real;
     begin
         if delay_g = 0 ns then
-            return 0; -- Special case: zero delay
+            return 0;
         end if;
         
-        -- Convert time to nanoseconds (as real number)
         delay_ns := real(delay_g / 1 ns);
-        
-        -- Calculate cycles: (frequency * delay_in_seconds)
-        -- delay_ns / 1e9 converts ns to seconds
         cycles := real(clk_freq_hz_g) * (delay_ns / 1.0e9);
         
-        -- Round to nearest integer
         return integer(round(cycles));
     end function;
     
-    constant MAX_COUNT : natural := calc_max_count;
+    constant CYCLES_TO_COUNT : natural := calc_cycles_to_count;
     
-    -- Counter register
-    signal count_reg : natural range 0 to MAX_COUNT := 0;
-    signal done_reg  : std_ulogic := '1';
+    signal count : natural := 0;
     
 begin
-    -- Assertions for parameter validation
     assert clk_freq_hz_g > 0 
         report "Frequency must be greater than zero!" 
         severity failure;
@@ -55,39 +46,25 @@ begin
         report "Delay cannot be negative!" 
         severity failure;
     
-    -- Output assignment
-    done_o <= done_reg;
-    
     process(clk_i, arst_i)
     begin
         if arst_i = '1' then
-            -- Asynchronous reset: return to idle state
-            count_reg <= 0;
-            done_reg  <= '1'; 
+            count  <= 0;
+            done_o <= '1'; 
             
         elsif rising_edge(clk_i) then
-            if done_reg = '1' then
-                -- Idle state: waiting for the start pulse
-                if start_i = '1' then
-                    if MAX_COUNT = 0 then
-                        -- Special case: zero delay means done immediately
-                        done_reg  <= '1';
-                        count_reg <= 0;
-                    else
-                        -- Start counting
-                        done_reg  <= '0';
-                        count_reg <= 1; -- Start at 1, we've already used one cycle
-                    end if;
+            if count = 0 then
+                -- Idle: not counting
+                done_o <= '1';
+                if start_i = '1' and CYCLES_TO_COUNT > 0 then
+                    -- Start counting
+                    count  <= CYCLES_TO_COUNT;
+                    done_o <= '0';
                 end if;
             else
-                -- Active state: incrementing the counter
-                if count_reg < MAX_COUNT then
-                    count_reg <= count_reg + 1;
-                else
-                    -- Target reached: return to idle
-                    count_reg <= 0;
-                    done_reg  <= '1'; 
-                end if;
+                -- Counting down
+                done_o <= '0';
+                count  <= count - 1;
             end if;
         end if;
     end process;
