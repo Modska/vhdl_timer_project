@@ -11,11 +11,14 @@ entity tb_timer is
         runner_cfg    : string;
         -- Generics injected by VUnit run.py
         clk_freq_hz_g : positive := 50_000_000; 
-        delay_g       : time     := 100 us
+        delay_ns_g    : natural  := 100_000  -- Delay in nanoseconds
     );
 end entity;
 
 architecture sim of tb_timer is
+    -- Convert nanoseconds to time
+    constant DELAY_TIME : time := delay_ns_g * 1 ns;
+    
     -- Signals to connect to the timer
     signal clk   : std_logic := '0';
     signal rst   : std_logic := '0';
@@ -33,7 +36,7 @@ begin
     uut: entity work.timer
         generic map (
             clk_freq_hz_g => clk_freq_hz_g,
-            delay_g       => delay_g
+            delay_g       => DELAY_TIME
         )
         port map (
             clk_i   => clk,
@@ -42,7 +45,7 @@ begin
             done_o  => done
         );
 
-main : process
+    main : process
         variable start_time : time;
     begin
         test_runner_setup(runner, runner_cfg);
@@ -51,26 +54,26 @@ main : process
             
             -- Runs ONLY for positive delays (Standard tests)
             if run("Test_Timer_Accuracy") then
-                if delay_g > 0 ns then
+                if DELAY_TIME > 0 ns then
                     rst <= '1'; wait for 100 ns; rst <= '0';
                     wait until rising_edge(clk);
                     start <= '1'; wait until rising_edge(clk); start <= '0';
                     wait until done = '0';
                     start_time := now;
                     wait until done = '1';
-                    check_equal(now - start_time, delay_g, "Accuracy mismatch");
+                    check_equal(now - start_time, DELAY_TIME, "Accuracy mismatch");
                 else
                     info("Skipping Accuracy test for 0ns delay");
                 end if;
 
             -- Runs for standard delays to test reset
             elsif run("Test_Reset_During_Counting") then
-                if delay_g > 20 ns then -- Need some time to actually be counting
+                if DELAY_TIME > 20 ns then -- Need some time to actually be counting
                     rst <= '1'; wait for 100 ns; rst <= '0';
                     wait until rising_edge(clk);
                     start <= '1'; wait until rising_edge(clk); start <= '0';
                     wait until done = '0';
-                    wait for delay_g / 2;
+                    wait for DELAY_TIME / 2;
                     rst <= '1'; wait for 100 ns;
                     check(done = '1', "Done should be high after reset");
                     rst <= '0';
@@ -80,7 +83,7 @@ main : process
 
             -- Runs ONLY for the 0ns configuration
             elsif run("Test_Zero_Delay") then
-                if delay_g = 0 ns then
+                if DELAY_TIME = 0 ns then
                     rst <= '1'; wait for 100 ns; rst <= '0';
                     wait until rising_edge(clk);
                     start <= '1'; wait until rising_edge(clk); start <= '0';
