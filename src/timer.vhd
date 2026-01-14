@@ -17,44 +17,39 @@ entity timer is
  end entity timer ;
 
 architecture rtl of timer is
-    -- Calcul de la limite (Hypothèse : le résultat doit tenir dans un entier 32 bits)
+    -- Calculate the cycle limit 
+    -- Assumption: clk_freq * delay fits within a 31-bit positive integer (VHDL natural limit)
     constant MAX_COUNT : natural := clk_freq_hz_g * (delay_g / 1 sec);
     
-    -- Registre du compteur
+    -- Counter register
     signal count_reg : natural range 0 to MAX_COUNT := 0;
     
-    -- Signal interne pour savoir si on est en train de compter
-    signal busy : std_ulogic := '0';
 begin
 
     process(clk_i, arst_i)
     begin
         if arst_i = '1' then
+            -- Asynchronous reset: return to idle state
             count_reg <= 0;
-            busy      <= '0';
-            done_o    <= '1';
+            done_o    <= '1'; 
+            
         elsif rising_edge(clk_i) then
-            if busy = '0' then
-                -- État de repos : on attend le start
+            if done_o = '1' then
+                -- Idle state: waiting for the start pulse
                 if start_i = '1' then
-                    busy    <= '1';
+                    done_o    <= '0'; -- Switch to busy mode
                     count_reg <= 0;
-                    done_o  <= '0';
-                else
-                    done_o  <= '1';
                 end if;
             else
-                -- État actif : on compte les cycles
+                -- Active state: incrementing the counter
                 if count_reg < MAX_COUNT - 1 then
                     count_reg <= count_reg + 1;
                 else
-                    -- Terminé !
+                    -- Target reached: reset counter and return to idle
                     count_reg <= 0;
-                    busy      <= '0';
-                    done_o    <= '1';
+                    done_o    <= '1'; 
                 end if;
             end if;
-            
         end if;
     end process;
 
