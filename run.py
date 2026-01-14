@@ -1,16 +1,24 @@
 from vunit import VUnit
+from vunit.sim_if.ghdl import GHDLInterface
 import os
 
-# Create VUnit instance with deprecated warnings fixed
+# --- THE FIX ---
+# We manually override the backend detection because VUnit fails 
+# to parse "mcode JIT code generator"
+def forced_determine_backend(prefix):
+    return "mcode"
+
+GHDLInterface.determine_backend = staticmethod(forced_determine_backend)
+# ---------------
+
+# Initialize VUnit
 vu = VUnit.from_argv(compile_builtins=False)
 vu.add_vhdl_builtins()
 
-# Create a library named 'lib'
+# Library and files setup
 lib = vu.add_library("lib")
-
-# Add all VHDL files from src and tb folders
 lib.add_source_files("src/*.vhd")
 lib.add_source_files("tb/*.vhd")
 
-# Run the simulation
+# Run
 vu.main()
