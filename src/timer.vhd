@@ -74,33 +74,31 @@ begin
                " clock cycles"
         severity note;
     
-    -- Output assignment
-    done_o <= '0' when counting else '1';
-    
     process(clk_i, arst_i)
     begin
         if arst_i = '1' then
             count    <= 0;
             counting <= false;
+            done_o   <= '1';  -- Asynchronous reset sets done immediately
             
         elsif rising_edge(clk_i) then
             if not counting then
                 -- Idle state: waiting for start pulse
-                -- Note: start_i can stay high for multiple cycles,
-                -- but we only trigger once
+                done_o <= '1';
                 if start_i = '1' and CYCLES_TO_COUNT > 0 then
                     count    <= 0;
                     counting <= true;
+                    done_o   <= '0';  -- Start counting, set done low
                 end if;
-                -- If CYCLES_TO_COUNT = 0 (zero delay case),
-                -- we stay in idle with done_o = '1'
                 
             else
                 -- Counting state
+                done_o <= '0';
                 if count = CYCLES_TO_COUNT - 1 then
                     -- Finished counting: return to idle
                     count    <= 0;
                     counting <= false;
+                    done_o   <= '1';  -- Set done high when finished
                 else
                     -- Continue counting
                     count <= count + 1;
