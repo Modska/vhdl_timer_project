@@ -80,20 +80,40 @@ begin
             -- Test 2: Reset during counting
             elsif run("Test_Reset_During_Counting") then
                 if DELAY_TIME > 20 ns then
+                    info("Starting Reset test with DELAY_TIME = " & time'image(DELAY_TIME));
+                    
                     rst <= '1'; wait for 100 ns; rst <= '0';
                     wait until rising_edge(clk);
                     
+                    info("Starting timer...");
                     start <= '1'; 
                     wait until rising_edge(clk); 
                     start <= '0';
-                    wait until done = '0';
                     
-                    -- Reset in the middle
-                    wait for DELAY_TIME / 2;
-                    rst <= '1'; 
-                    wait for 100 ns;
-                    check(done = '1', "Done should be high after reset");
-                    rst <= '0';
+                    info("Waiting for done to go low...");
+                    -- Wait until actually counting (done goes low)
+                    wait until done = '0' for DELAY_TIME + 1 us;
+                    
+                    if done = '0' then
+                        info("Timer is counting, waiting for half delay...");
+                        -- Wait for half the delay period
+                        wait for DELAY_TIME / 2;
+                        
+                        info("Applying reset...");
+                        -- Apply reset while counting
+                        rst <= '1'; 
+                        wait for 100 ns;
+                        
+                        -- Check done is high (can be checked during reset)
+                        check(done = '1', "Done should be high during/after reset");
+                        
+                        -- Release reset and verify still idle
+                        rst <= '0';
+                        wait until rising_edge(clk);
+                        check(done = '1', "Done should remain high after reset release");
+                    else
+                        check(false, "Timer never started counting - done never went low!");
+                    end if;
                 else
                     info("Skipping Reset test for very short delay");
                 end if;
