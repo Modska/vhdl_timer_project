@@ -79,29 +79,32 @@ begin
         if arst_i = '1' then
             count    <= 0;
             counting <= false;
-            done_o   <= '1';  -- Asynchronous reset sets done immediately
+            done_o   <= '1';
             
         elsif rising_edge(clk_i) then
             if not counting then
-                -- Idle state: waiting for start pulse
-                done_o <= '1';
+                -- Idle state
                 if start_i = '1' and CYCLES_TO_COUNT > 0 then
+                    -- Start counting
                     count    <= 0;
                     counting <= true;
-                    done_o   <= '0';  -- Start counting, set done low
+                    done_o   <= '0';
+                else
+                    -- Stay idle
+                    done_o <= '1';
                 end if;
                 
             else
                 -- Counting state
-                done_o <= '0';
                 if count = CYCLES_TO_COUNT - 1 then
-                    -- Finished counting: return to idle
+                    -- Finished counting
                     count    <= 0;
                     counting <= false;
-                    done_o   <= '1';  -- Set done high when finished
+                    done_o   <= '1';
                 else
                     -- Continue counting
-                    count <= count + 1;
+                    count  <= count + 1;
+                    done_o <= '0';
                 end if;
             end if;
         end if;
