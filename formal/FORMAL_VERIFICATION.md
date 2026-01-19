@@ -2,11 +2,18 @@
 
 ## Overview
 
-This directory contains formal verification assets for the timer module using SymbiYosys (sby) and PSL (Property Specification Language).
+This directory contains formal verification for the timer module using SymbiYosys (sby) with GHDL and Yosys.
+
+## Quick Start
+
+```bash
+cd formal
+./run_formal.sh
+```
 
 ## What is Formal Verification?
 
-Unlike simulation (which tests specific scenarios), formal verification **mathematically proves** that properties hold for **all possible inputs and states**. This provides much stronger guarantees about correctness.
+Unlike simulation which tests specific scenarios, formal verification **mathematically proves** properties hold for **all possible states**.
 
 ## Tools Used
 
