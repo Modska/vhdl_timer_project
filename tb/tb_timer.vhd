@@ -47,6 +47,7 @@ begin
 
     main : process
         variable start_time : time;
+        variable is_accurate : boolean; -- To store our comparison result
     begin
         test_runner_setup(runner, runner_cfg);
 
