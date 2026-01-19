@@ -63,9 +63,9 @@ begin
                     wait until done = '0';
                     start_time := now; 
                     wait until done = '1';
-                    -- Calcul des valeurs entières (sans le mot-clé declare)
-                    measured_ns := (now - start_time) / 1 ns;
-                    expected_ns := DELAY_TIME / 1 ns;
+                    -- Rounding to 1ns and 500 ps added to solve rounding issues
+                    measured_ns := (now - start_time + 500 ps) / 1 ns;
+                    expected_ns := (DELAY_TIME + 500 ps) / 1 ns;
                     check_equal(measured_ns, expected_ns, 
                             "Accuracy mismatch! Measured: " & to_string(measured_ns) & "ns");
                 else
