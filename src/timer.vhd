@@ -22,23 +22,23 @@ architecture rtl of timer is
         variable delay_ns : real;
         variable cycles   : real;
     begin
-        if delay_g = 0 ns then
+        if delay_g = 0 ns then -- test if the delay is nul
             return 0;
         end if;
         
-        delay_ns := real(delay_g / 1 ns);
-        cycles := real(clk_freq_hz_g) * (delay_ns / 1.0e9);
+        delay_ns := real(delay_g / 1 ns); -- Divide by 1 ns to get the scaling factor as a real
+        cycles := real(clk_freq_hz_g) * (delay_ns / 1.0e9); -- Convertion from freq used and time desired to number of clocks needed
         
         return integer(round(cycles));
     end function;
     
-    constant CYCLES_TO_COUNT : natural := calc_cycles_to_count;
+    constant CYCLES_TO_COUNT : natural := calc_cycles_to_count; --stocking in a constant the number of cycle needed to reach the timing needed
     
     signal count : natural := 0;
     signal counting : boolean := false;
     
 begin
-    assert clk_freq_hz_g > 0 
+    assert clk_freq_hz_g > 0 --tests if values are usable
         report "Frequency must be greater than zero!" 
         severity failure;
 
@@ -51,7 +51,7 @@ begin
     
     process(clk_i, arst_i)
     begin
-        if arst_i = '1' then
+        if arst_i = '1' then --Reset to restart the timer
             count    <= 0;
             counting <= false;
             

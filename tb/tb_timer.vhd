@@ -29,7 +29,7 @@ architecture sim of tb_timer is
     constant CLK_PERIOD : time := 1 sec / clk_freq_hz_g;
 begin
 
-    -- Clock generation
+    -- Clock generation for simulation
     clk <= not clk after CLK_PERIOD / 2;
 
     -- Unit Under Test (UUT) Instantiation
@@ -57,11 +57,11 @@ begin
                 if DELAY_TIME > 0 ns then
                     rst <= '1'; wait for 100 ns; rst <= '0';
                     wait until rising_edge(clk);
-                    start <= '1'; wait until rising_edge(clk); start <= '0';
+                    start <= '1'; wait until rising_edge(clk); start <= '0'; --starting the timer
                     wait until done = '0';
-                    start_time := now;
+                    start_time := now; 
                     wait until done = '1';
-                    check_equal(now - start_time, DELAY_TIME, "Accuracy mismatch");
+                    check_equal(now - start_time, DELAY_TIME, "Accuracy mismatch"); --Comparaison between the test time and the simulated time
                 else
                     info("Skipping Accuracy test for 0ns delay");
                 end if;
@@ -87,16 +87,42 @@ begin
                     rst <= '1'; wait for 100 ns; rst <= '0';
                     wait until rising_edge(clk);
                     start <= '1'; wait until rising_edge(clk); start <= '0';
-                    -- Should be done almost immediately
+                    -- Should be done almost immediately because the is no waiting 
                     wait until done = '1' for 4 * CLK_PERIOD;
                     check(done = '1', "Timer failed to handle 0ns delay");
                 else
                     info("Skipping Zero_Delay test for positive delay config");
                 end if;
+            -- EDGE CASE: Start signal ignored while already counting
+            elsif run("Test_Ignore_Start_During_Counting") then
+                if DELAY_TIME > 50 ns then
+                    -- 1. System initialization
+                    rst <= '1'; wait for 100 ns; rst <= '0';
+                    wait until rising_edge(clk);
+                    -- 2. First valid start pulse
+                    start <= '1'; wait until rising_edge(clk); start <= '0';
+                    -- Wait for the timer to acknowledge by dropping the done signal
+                    wait until done = '0';
+                    start_time := now; -- Start measuring time here
+                    -- 3. Attempt to disturb the timer with a second start pulse
+                    -- Wait for 25% of the duration before sending the glitch/extra pulse
+                    wait for DELAY_TIME / 4;
+                    start <= '1'; wait until rising_edge(clk); start <= '0';
+                    
+                    -- 4. Wait for the natural completion of the timer
+                    wait until done = '1';
+                    wait until done = '1';
+                    
+                    -- 5. Final validation
+                    -- If the timer ignored the second start, total time will match DELAY_TIME.
+                    -- If it incorrectly restarted, total time would be (DELAY_TIME + DELAY_TIME/4).
+                    check_equal(now - start_time, DELAY_TIME, 
+                        "Error: Timer restarted or shifted its end time upon receiving an extra start pulse!");
+                end if;
             end if;
+            
 
         end loop;
-
         test_runner_cleanup(runner);
     end process;
 end architecture;

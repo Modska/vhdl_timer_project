@@ -14,8 +14,8 @@ lib.add_source_files("tb/*.vhd")
 tb = lib.test_bench("tb_timer")
 
 # Regular tests - pass delay in nanoseconds
-for freq in [50_000_000, 100_000_000]:
-    for delay_ns in [100_000, 50_000]:  # 100us and 50us in nanoseconds
+for freq in [50_000_000, 100_000_000, 68_000_000]: #50 Mhz, 100 Mhz, 68 Mhz
+    for delay_ns in [100_000, 50_000, 150_000]:  # 100us and 50us and 150us in nanoseconds
         delay_name = f"{delay_ns//1000}us"
         tb.add_config(
             name=f"F{freq}_D{delay_name}", 
