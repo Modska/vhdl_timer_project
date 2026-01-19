@@ -47,7 +47,6 @@ begin
 
     main : process
         variable start_time : time;
-        variable is_accurate : boolean; -- To store our comparison result
     begin
         test_runner_setup(runner, runner_cfg);
 
@@ -62,19 +61,14 @@ begin
                     wait until done = '0';
                     start_time := now; 
                     wait until done = '1';
-                    -- 3. Precision Check (Tolerance logic)
-                    -- We check if the duration is exactly T, T+Period, or T-Period
-                    -- within a 1 picosecond margin to handle floating point rounding.
-                    is_accurate := 
-                        (abs((now - start_time) - DELAY_TIME) < 1 ps) or 
-                        (abs((now - start_time) - (DELAY_TIME + CLK_PERIOD)) < 1 ps) or
-                        (abs((now - start_time) - (DELAY_TIME - CLK_PERIOD)) < 1 ps);
-
-                    -- 4. VUnit Check
-                    check(is_accurate, 
-                        "Accuracy mismatch! Measured: " & to_string(now - start_time) & 
-                        " | Expected (approx): " & to_string(DELAY_TIME) & 
-                        " | Target Period: " & to_string(CLK_PERIOD));
+                    declare
+                    variable measured_ns : integer := (now - start_time) / 1 ns;
+                    variable expected_ns : integer := DELAY_TIME / 1 ns;
+                    begin
+                    check_equal(measured_ns, expected_ns, 
+                        "Accuracy mismatch! Measured: " & to_string(measured_ns) & "ns" &
+                        ", Expected: " & to_string(expected_ns) & "ns");
+                    end;
                 else
                     info("Skipping Accuracy test for 0ns delay");
                 end if;
