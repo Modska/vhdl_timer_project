@@ -93,31 +93,21 @@ begin
                 else
                     info("Skipping Zero_Delay test for positive delay config");
                 end if;
-            -- EDGE CASE: Start signal ignored while already counting
-            elsif run("Test_Ignore_Start_During_Counting") then
-                if DELAY_TIME > 50 ns then
-                    -- 1. System initialization
+            -- EDGE CASE: Continuous Start (Back-to-back)
+            elsif run("Test_Continuous_Start") then
+                if DELAY_TIME > 0 ns then
                     rst <= '1'; wait for 100 ns; rst <= '0';
                     wait until rising_edge(clk);
-                    -- 2. First valid start pulse
-                    start <= '1'; wait until rising_edge(clk); start <= '0';
-                    -- Wait for the timer to acknowledge by dropping the done signal
-                    wait until done = '0';
-                    start_time := now; -- Start measuring time here
-                    -- 3. Attempt to disturb the timer with a second start pulse
-                    -- Wait for 25% of the duration before sending the glitch/extra pulse
-                    wait for DELAY_TIME / 4;
-                    start <= '1'; wait until rising_edge(clk); start <= '0';
                     
-                    -- 4. Wait for the natural completion of the timer
-                    wait until done = '1';
-                    wait until done = '1';
+                    -- On maintient START à '1'
+                    start <= '1'; 
+                    wait until done = '0'; -- Attend le début du 1er cycle
+                    wait until done = '1'; -- Attend la fin du 1er cycle
                     
-                    -- 5. Final validation
-                    -- If the timer ignored the second start, total time will match DELAY_TIME.
-                    -- If it incorrectly restarted, total time would be (DELAY_TIME + DELAY_TIME/4).
-                    check_equal(now - start_time, DELAY_TIME, 
-                        "Error: Timer restarted or shifted its end time upon receiving an extra start pulse!");
+                    -- On vérifie s'il redémarre immédiatement (au prochain cycle)
+                    wait until rising_edge(clk);
+                    check(done = '0', "Timer should have restarted immediately with continuous start");
+                    start <= '0'; -- Relâcher
                 end if;
             end if;
             
