@@ -96,19 +96,24 @@ begin
             -- EDGE CASE: Continuous Start (Back-to-back)
             elsif run("Test_Continuous_Start") then
                 if DELAY_TIME > 0 ns then
-                    rst <= '1'; wait for 100 ns; rst <= '0';
-                    wait until rising_edge(clk);
-                    
-                    -- On maintient START à '1'
-                    start <= '1'; 
-                    wait until done = '0'; -- Attend le début du 1er cycle
-                    wait until done = '1'; -- Attend la fin du 1er cycle
-                    
-                    -- On vérifie s'il redémarre immédiatement (au prochain cycle)
-                    wait until rising_edge(clk);
-                    check(done = '0', "Timer should have restarted immediately with continuous start");
-                    start <= '0'; -- Relâcher
-                end if;
+                -- 1. Setup
+                rst <= '1'; wait for 100 ns; rst <= '0';
+                wait until rising_edge(clk);
+        
+                -- 2. Maintain START high
+                start <= '1'; 
+                wait until done = '0'; -- Wait for 1st cycle to start
+                wait until done = '1'; -- Wait for 1st cycle to end
+        
+                -- 3. Check for immediate restart
+                -- We wait for the rising edge where the timer evaluates START
+                wait until rising_edge(clk); 
+                -- Then we wait for the falling edge to be sure logic has propagated
+                wait until falling_edge(clk); 
+        
+        check(done = '0', "Timer should have restarted immediately with continuous start");
+        start <= '0'; 
+    end if;
             -- EDGE CASE: Very Short Delay (Minimum cycles)
             elsif run("Test_Minimum_Non_Zero_Delay") then
             -- This test is specifically relevant when DELAY_TIME is very small
