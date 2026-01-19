@@ -109,7 +109,29 @@ begin
                     check(done = '0', "Timer should have restarted immediately with continuous start");
                     start <= '0'; -- Relâcher
                 end if;
+            -- EDGE CASE: Very Short Delay (Minimum cycles)
+            elsif run("Test_Minimum_Non_Zero_Delay") then
+            -- This test is specifically relevant when DELAY_TIME is very small
+            if DELAY_TIME > 0 ns and DELAY_TIME <= CLK_PERIOD then
+                info("Testing minimal response time with delay: " & to_string(DELAY_TIME));
+        
+                -- 1. Reset the system
+                rst <= '1'; wait for 100 ns; rst <= '0';
+                wait until rising_edge(clk);
+        
+                -- 2. Trigger the timer
+                start <= '1'; wait until rising_edge(clk); start <= '0';
+        
+                -- 3. Measurement with a strict timeout
+                -- A 1-cycle timer should be done within a couple of clock cycles
+                wait until done = '1' for 3 * CLK_PERIOD;
+        
+                -- 4. Validation
+                check(done = '1', "Timer took too long or failed to finish for a minimal delay!");
+            else
+                info("Skipping Minimal_Delay test: DELAY_TIME is too large for this specific edge case.");
             end if;
+        end if;
             
 
         end loop;

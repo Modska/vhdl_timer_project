@@ -45,6 +45,10 @@ begin
     assert delay_g >= 0 ns 
         report "Delay cannot be negative!" 
         severity failure;
+        -- Informational assertion for very long delays
+    assert CYCLES_TO_COUNT < 2**30
+        report "Warning: Very long delay may cause overflow issues"
+        severity warning;
     
     -- Output logic
     done_o <= '0' when counting else '1';
