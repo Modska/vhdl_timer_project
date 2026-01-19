@@ -47,6 +47,8 @@ begin
 
     main : process
         variable start_time : time;
+        variable measured_ns : integer;
+        variable expected_ns : integer;
     begin
         test_runner_setup(runner, runner_cfg);
 
@@ -61,14 +63,11 @@ begin
                     wait until done = '0';
                     start_time := now; 
                     wait until done = '1';
-                    declare
-                    variable measured_ns : integer := (now - start_time) / 1 ns;
-                    variable expected_ns : integer := DELAY_TIME / 1 ns;
-                    begin
+                    -- Calcul des valeurs entières (sans le mot-clé declare)
+                    measured_ns := (now - start_time) / 1 ns;
+                    expected_ns := DELAY_TIME / 1 ns;
                     check_equal(measured_ns, expected_ns, 
-                        "Accuracy mismatch! Measured: " & to_string(measured_ns) & "ns" &
-                        ", Expected: " & to_string(expected_ns) & "ns");
-                    end;
+                            "Accuracy mismatch! Measured: " & to_string(measured_ns) & "ns");
                 else
                     info("Skipping Accuracy test for 0ns delay");
                 end if;
