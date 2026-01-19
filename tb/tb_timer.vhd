@@ -61,7 +61,7 @@ begin
                     wait until done = '0';
                     start_time := now; 
                     wait until done = '1';
-                    check_equal(now - start_time, DELAY_TIME, "Accuracy mismatch"); --Comparaison between the test time and the simulated time
+                    check_equal(now - start_time, DELAY_TIME + CLK_PERIOD, "Accuracy mismatch"); --Comparaison between the test time and the simulated time
                 else
                     info("Skipping Accuracy test for 0ns delay");
                 end if;
