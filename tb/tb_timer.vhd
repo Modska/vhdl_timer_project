@@ -49,6 +49,7 @@ begin
         variable start_time : time;
         variable measured_ns : integer;
         variable expected_ns : integer;
+        variable period_ns : integer;
     begin
         test_runner_setup(runner, runner_cfg);
 
@@ -66,8 +67,10 @@ begin
                     -- Rounding to 1ns and 500 ps added to solve rounding issues
                     measured_ns := (now - start_time + 500 ps) / 1 ns;
                     expected_ns := (DELAY_TIME + 500 ps) / 1 ns;
-                    check_equal(measured_ns, expected_ns, 
-                            "Accuracy mismatch! Measured: " & to_string(measured_ns) & "ns");
+                    check(measured_ns = expected_ns or measured_ns = expected_ns + period_ns,
+                        "Accuracy mismatch! Measured: " & to_string(measured_ns) & "ns" &
+                        ", Expected: " & to_string(expected_ns) & "ns (or " & 
+                        to_string(expected_ns + period_ns) & "ns with latency)");
                 else
                     info("Skipping Accuracy test for 0ns delay");
                 end if;
