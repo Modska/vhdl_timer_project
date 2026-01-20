@@ -39,16 +39,17 @@ jobs:
       - name: Run Formal Verification
         run: |
           source oss-cad-suite/environment
-          export SBY_PY_BIN="python3"
           export YOSYS="yosys -m ghdl" 
           cd formal
           sby -f timer.sby bmc
           sby -f timer.sby prove
+          sby -f timer.sby cover
       - name: Check Status
         run: |
-          # On vérifie les fichiers depuis la racine sans faire de 'cd'
           [ -f formal/timer_bmc/status ] && echo "BMC: $(cat formal/timer_bmc/status)"
           [ -f formal/timer_prove/status ] && echo "Prove: $(cat formal/timer_prove/status)"
+          [ -f formal/timer_cover/status ] && echo "cover: $(cat formal/timer_cover/status)"
+
       
       - name: Upload Formal Results
         if: always()
@@ -75,25 +76,24 @@ jobs:
           
           echo "## 🧪 VUnit Simulation" >> $GITHUB_STEP_SUMMARY
           if [ -d "vunit-test-results" ]; then
-            echo "✅ Simulation completed successfully." >> $GITHUB_STEP_SUMMARY
+            echo "✅ Simulation tests completed." >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Simulation results missing." >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 🛡️ Formal Verification Status" >> $GITHUB_STEP_SUMMARY
+          echo "## 🛡️ Formal Verification (SBY)" >> $GITHUB_STEP_SUMMARY
           echo "| Task | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "|:---:|:---:|" >> $GITHUB_STEP_SUMMARY
 
-          # On lit les statuts et on les met dans un tableau Markdown
+          # Boucle pour vérifier chaque tâche formelle
           for task in bmc prove cover; do
-            if [ -f "formal-verification-results/timer_$task/status" ]; then
-              STATUS=$(cat formal-verification-results/timer_$task/status)
-              if [ "$STATUS" = "PASS" ]; then
-                echo "| $task | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
-              else
-                echo "| $task | ❌ $STATUS |" >> $GITHUB_STEP_SUMMARY
-              fi
+            # Note : les artefacts sont téléchargés dans des dossiers nommés par l'artifact name
+            FILE="formal-verification-results/timer_$task/status"
+            if [ -f "$FILE" ]; then
+              STATUS=$(cat "$FILE")
+              [ "$STATUS" = "PASS" ] && EMOJI="✅" || EMOJI="❌"
+              echo "| $task | $EMOJI $STATUS |" >> $GITHUB_STEP_SUMMARY
             else
               echo "| $task | ⚠️ Not Found |" >> $GITHUB_STEP_SUMMARY
             fi
