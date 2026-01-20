@@ -13,8 +13,7 @@ depth 25
 smtbmc
 
 [script]
-# On utilise la commande ghdl directe (Yosys s'occupe du plugin en interne)
-ghdl --std=08 ../src/timer.vhd timer_formal.vhd -e timer_formal
+ghdl --std=08 timer.vhd timer_formal.vhd -e timer_formal
 prep -top timer_formal
 
 [files]
