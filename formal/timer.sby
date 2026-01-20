@@ -1,19 +1,22 @@
+[tasks]
+bmc
+prove
+cover
+
 [options]
-mode prove
+bmc: mode bmc
+prove: mode prove
+cover: mode cover
 depth 20
 
 [engines]
 smtbmc
 
 [script]
-# Compilation des fichiers VHDL avec GHDL
+# Compilation using VHDL-2008 for PSL support
 ghdl --std=08 ../timer.vhd timer_formal.vhd -e timer_formal
-
-# Préparation pour le solveur
 prep -top timer_formal
 
 [files]
-# Chemin relatif vers le code source original
 ../timer.vhd
-# Le wrapper créé ci-dessus
 timer_formal.vhd
