@@ -13,10 +13,10 @@ depth 20
 smtbmc
 
 [script]
-# Compilation using VHDL-2008 for PSL support
-ghdl --std=08 ../timer.vhd timer_formal.vhd -e timer_formal
+# Note the path change here as well for GHDL
+ghdl --std=08 ../src/timer.vhd timer_formal.vhd -e timer_formal
 prep -top timer_formal
 
 [files]
-../timer.vhd
+../src/timer.vhd
 timer_formal.vhd
