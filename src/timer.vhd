@@ -18,11 +18,9 @@ end entity timer;
 
 architecture rtl of timer is
     -- Calculate how many cycles the timer should count
-    -- Handles edge cases: zero delay, sub-clock delays, very long delays
     function calc_cycles_to_count return natural is
         variable delay_ns : real;
         variable cycles   : real;
-        variable result   : natural;
     begin
         if delay_g = 0 ns then -- test if the delay is nul
             return 0;
@@ -31,21 +29,12 @@ architecture rtl of timer is
         delay_ns := real(delay_g / 1 ns); -- Divide by 1 ns to get the scaling factor as a real
         cycles := real(clk_freq_hz_g) * (delay_ns / 1.0e9); -- Convertion from freq used and time desired to number of clocks needed
         
-        -- Round to nearest integer
-        result := integer(round(cycles));
-        
-        -- Critical: For sub-clock period delays, ensure at least 1 cycle
-        -- A synchronous counter cannot count less than one clock period
-        if result = 0 and delay_g > 0 ns then
-            result := 1;
-        end if;
-        
-        return result;
+        return integer(round(cycles));
     end function;
     
     constant CYCLES_TO_COUNT : natural := calc_cycles_to_count; --stocking in a constant the number of cycle needed to reach the timing needed
     
-    signal count    : natural := 0;
+    signal count : natural := 0;
     signal counting : boolean := false;
     
 begin
@@ -61,49 +50,32 @@ begin
         report "Warning: Very long delay may cause overflow issues"
         severity warning;
     
-    -- Informational warnings
-    assert CYCLES_TO_COUNT < 2**30
-        report "Warning: Very long delay may cause overflow issues"
-        severity warning;
-    
-    -- Info message for sub-clock period delays
-    assert (delay_g = 0 ns) or (CYCLES_TO_COUNT > 0)
-        report "Note: Delay " & time'image(delay_g) & 
-               " will be implemented with " & integer'image(CYCLES_TO_COUNT) & 
-               " clock cycles"
-        severity note;
+    -- Output logic
+    done_o <= '0' when counting else '1';
     
     process(clk_i, arst_i)
     begin
         if arst_i = '1' then --Reset to restart the timer
             count    <= 0;
             counting <= false;
-            done_o   <= '1';
             
         elsif rising_edge(clk_i) then
             if not counting then
                 -- Idle state
                 if start_i = '1' and CYCLES_TO_COUNT > 0 then
-                    -- Start counting
+                    -- Start counting from 0
                     count    <= 0;
                     counting <= true;
-                    done_o   <= '0';
-                else
-                    -- Stay idle
-                    done_o <= '1';
                 end if;
-                
             else
                 -- Counting state
                 if count = CYCLES_TO_COUNT - 1 then
                     -- Finished counting
                     count    <= 0;
                     counting <= false;
-                    done_o   <= '1';
                 else
                     -- Continue counting
-                    count  <= count + 1;
-                    done_o <= '0';
+                    count <= count + 1;
                 end if;
             end if;
         end if;
