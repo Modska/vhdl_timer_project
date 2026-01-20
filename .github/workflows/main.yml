@@ -84,16 +84,21 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 🛡️ Formal Verification (SBY)" >> $GITHUB_STEP_SUMMARY
           echo "| Task | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|:---:|:---:|" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
 
-          # Boucle pour vérifier chaque tâche formelle
           for task in bmc prove cover; do
-            # Note : les artefacts sont téléchargés dans des dossiers nommés par l'artifact name
-            FILE="formal-verification-results/timer_$task/status"
-            if [ -f "$FILE" ]; then
-              STATUS=$(cat "$FILE")
-              [ "$STATUS" = "PASS" ] && EMOJI="✅" || EMOJI="❌"
-              echo "| $task | $EMOJI $STATUS |" >> $GITHUB_STEP_SUMMARY
+            # On définit le chemin du fichier status
+            STATUS_FILE="formal-verification-results/timer_$task/status"
+            
+            if [ -f "$STATUS_FILE" ]; then
+              # On récupère juste le premier mot (PASS ou FAIL)
+              RAW_STATUS=$(head -n 1 "$STATUS_FILE" | awk '{print $1}')
+              
+              if [ "$RAW_STATUS" = "PASS" ]; then
+                echo "| $task | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "| $task | ❌ $RAW_STATUS |" >> $GITHUB_STEP_SUMMARY
+              fi
             else
               echo "| $task | ⚠️ Not Found |" >> $GITHUB_STEP_SUMMARY
             fi
