@@ -1,18 +1,18 @@
 [tasks]
 bmc
 prove
+cover
 
 [options]
 bmc: mode bmc
 prove: mode prove
 cover: mode cover
-depth 40  
+depth 40
 
 [engines]
 smtbmc
 
 [script]
-# Syntax pour Yosys 0.48+ avec le plugin GHDL intégré
 ghdl --std=08 timer.vhd timer_formal.vhd -e timer_formal
 prep -top timer_formal
 

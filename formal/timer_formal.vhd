@@ -48,10 +48,6 @@ begin
     -- 4. COMPLETION CHECK
     -- psl assert always ((start_i = '1' and done_o = '1' and arst_i = '0') -> next[6] (done_o = '1'));
 
-    -- =========================================================
-    -- AJOUT POUR LE MODE COVER
-    -- =========================================================
-    -- Cette ligne cherche un scénario où le timer démarre (start) puis finit (done)
     -- psl c_timer_complete : cover {start_i = '1'; done_o = '0'[*1 to 10]; done_o = '1'};
 
 end architecture;
