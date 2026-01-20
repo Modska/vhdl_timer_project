@@ -38,10 +38,14 @@ jobs:
 
       - name: Run Formal Verification
         run: |
-          # On ajoute la suite au PATH proprement pour tout le shell
-          export PATH=$GITHUB_WORKSPACE/oss-cad-suite/bin:$PATH
-          # On force Yosys à utiliser son propre plugin GHDL
-          export YOSYS_GHDL=ghdl
+          source oss-cad-suite/environment
+          cd formal
+          # On force SBY à utiliser Yosys avec le module GHDL chargé explicitement
+          export SBY_PY_BIN="python3"
+          export YOSYS="yosys -m ghdl" 
+          
+          sby -f timer.sby bmc
+          sby -f timer.sby prove
           
           cd formal
           # On lance les tâches. Si sby échoue, on affiche le log d'erreur de Yosys
