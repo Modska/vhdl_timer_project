@@ -1,0 +1,21 @@
+[tasks]
+bmc
+prove
+cover
+
+[options]
+bmc: mode bmc
+prove: mode prove
+cover: mode cover
+depth 40
+
+[engines]
+smtbmc
+
+[script]
+ghdl --std=08 timer.vhd timer_formal.vhd -e timer_formal
+prep -top timer_formal
+
+[files]
+../src/timer.vhd
+timer_formal.vhd

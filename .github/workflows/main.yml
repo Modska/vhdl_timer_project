@@ -1,14 +1,105 @@
-name: VHDL_CI
-on: [push]
+name: VHDL_CI_with_Formal
+on: [push, pull_request]
+
 jobs:
-  build:
+  # Job 1: Simulation tests with VUnit
+  simulation:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Tools
+      
+      - name: Install GHDL and VUnit
         run: |
           sudo apt-get update
           sudo apt-get install -y ghdl
           pip install vunit_hdl
-      - name: Run Simulation
+      
+      - name: Run VUnit Tests
         run: python run.py
+      
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vunit-test-results
+          path: vunit_out/
+
+  # Job 2: Formal verification with SymbiYosys (Stretch Goal)
+  formal:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OSS CAD Suite
+        run: |
+          wget -q https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2024-12-18/oss-cad-suite-linux-x64-20241218.tgz
+          tar -xzf oss-cad-suite-linux-x64-20241218.tgz
+
+      - name: Run Formal Verification
+        run: |
+          source oss-cad-suite/environment
+          export YOSYS="yosys -m ghdl" 
+          cd formal
+          sby -f timer.sby bmc
+          sby -f timer.sby prove
+          sby -f timer.sby cover
+      - name: Check Status
+        run: |
+          [ -f formal/timer_bmc/status ] && echo "BMC: $(cat formal/timer_bmc/status)"
+          [ -f formal/timer_prove/status ] && echo "Prove: $(cat formal/timer_prove/status)"
+          [ -f formal/timer_cover/status ] && echo "cover: $(cat formal/timer_cover/status)"
+
+      
+      - name: Upload Formal Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: formal-verification-results
+          path: formal/timer_*/
+
+  # Job 3: Summary Report
+  report:
+    needs: [simulation, formal]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+      
+      - name: Generate Summary
+        run: |
+          echo "# 📋 Project Verification Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 🧪 VUnit Simulation" >> $GITHUB_STEP_SUMMARY
+          if [ -d "vunit-test-results" ]; then
+            echo "✅ Simulation tests completed." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Simulation results missing." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🛡️ Formal Verification (SBY)" >> $GITHUB_STEP_SUMMARY
+          echo "| Task | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+
+          for task in bmc prove cover; do
+            # On définit le chemin du fichier status
+            STATUS_FILE="formal-verification-results/timer_$task/status"
+            
+            if [ -f "$STATUS_FILE" ]; then
+              # On récupère juste le premier mot (PASS ou FAIL)
+              RAW_STATUS=$(head -n 1 "$STATUS_FILE" | awk '{print $1}')
+              
+              if [ "$RAW_STATUS" = "PASS" ]; then
+                echo "| $task | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "| $task | ❌ $RAW_STATUS |" >> $GITHUB_STEP_SUMMARY
+              fi
+            else
+              echo "| $task | ⚠️ Not Found |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
