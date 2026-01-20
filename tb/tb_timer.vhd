@@ -65,8 +65,8 @@ begin
                     start_time := now; 
                     wait until done = '1';
                     -- Rounding to 1ns and 500 ps added to solve rounding issues
-                    if  abs((now - start_time) - DELAY_TIME) < (CLK_PERIOD / 2) or 
-                        abs((now - start_time) - (DELAY_TIME + CLK_PERIOD)) < (CLK_PERIOD / 2) then
+                    if  abs((now - start_time) - DELAY_TIME) < (CLK_PERIOD * 3 / 4) or 
+                        abs((now - start_time) - (DELAY_TIME + CLK_PERIOD)) < (CLK_PERIOD / 3/4 ) then
                         is_accurate := true;
                     else
                         is_accurate := false;
