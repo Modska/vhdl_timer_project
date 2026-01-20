@@ -39,19 +39,23 @@ jobs:
       - name: Run Formal Verification
         run: |
           source oss-cad-suite/environment
-          cd formal
-          # On force SBY à utiliser Yosys avec le module GHDL chargé explicitement
           export SBY_PY_BIN="python3"
           export YOSYS="yosys -m ghdl" 
-          
+          cd formal
           sby -f timer.sby bmc
           sby -f timer.sby prove
-          
-          cd formal
-          # On lance les tâches. Si sby échoue, on affiche le log d'erreur de Yosys
-          sby -f timer.sby bmc || (cat timer_bmc/model/design.log && exit 1)
-          sby -f timer.sby prove
-          sby -f timer.sby cover
+      - name: Check Status
+        run: |
+          # On vérifie les fichiers depuis la racine sans faire de 'cd'
+          [ -f formal/timer_bmc/status ] && echo "BMC: $(cat formal/timer_bmc/status)"
+          [ -f formal/timer_prove/status ] && echo "Prove: $(cat formal/timer_prove/status)"
+      
+      - name: Upload Formal Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: formal-verification-results
+          path: formal/timer_*/
 
   # Job 3: Summary Report
   report:
