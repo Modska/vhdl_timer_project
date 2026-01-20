@@ -81,13 +81,20 @@ jobs:
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 🛡️ Formal Verification" >> $GITHUB_STEP_SUMMARY
-          if [ -d "formal-verification-results" ]; then
-            echo "✅ Formal results available." >> $GITHUB_STEP_SUMMARY
-            # Affiche le statut BMC si disponible
-            if [ -f "formal-verification-results/timer_bmc/status" ]; then
-               echo "**BMC Status:** $(cat formal-verification-results/timer_bmc/status)" >> $GITHUB_STEP_SUMMARY
+          echo "## 🛡️ Formal Verification Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Task | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          # On lit les statuts et on les met dans un tableau Markdown
+          for task in bmc prove cover; do
+            if [ -f "formal-verification-results/timer_$task/status" ]; then
+              STATUS=$(cat formal-verification-results/timer_$task/status)
+              if [ "$STATUS" = "PASS" ]; then
+                echo "| $task | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "| $task | ❌ $STATUS |" >> $GITHUB_STEP_SUMMARY
+              fi
+            else
+              echo "| $task | ⚠️ Not Found |" >> $GITHUB_STEP_SUMMARY
             fi
-          else
-            echo "⚠️ Formal results not found." >> $GITHUB_STEP_SUMMARY
-          fi
+          done
