@@ -26,7 +26,7 @@ The timer automatically calculates the required number of clock cycles and provi
 - ✅ **Fully parametric**: Configurable frequency and delay via generics
 - ✅ **Synthesis-ready**: Industry-standard RTL coding style
 - ✅ **Asynchronous reset**: Immediate return to idle state
-- ✅ **Comprehensive testing**: 42+ test configurations with VUnit
+- ✅ **Comprehensive testing**: 82+ test configurations with VUnit
 - ✅ **Edge case handling**: Zero delay, sub-clock delays, long delays
 - ✅ **Formal verification**: Optional SymbiYosys integration
 - ✅ **CI/CD**: Automated testing on every commit
@@ -286,7 +286,7 @@ See [`formal/FORMAL_VERIFICATION.md`](formal/FORMAL_VERIFICATION.md) for details
 
 The CI pipeline automatically:
 1. ✅ Installs GHDL and VUnit
-2. ✅ Runs all 42+ test cases
+2. ✅ Runs all 82+ test cases
 3. ✅ (Optional) Runs formal verification
 4. ✅ Uploads test results as artifacts
 5. ✅ Provides pass/fail status
@@ -398,9 +398,6 @@ To handle non-integer frequencies like **68 MHz** (where the clock period is ~$1
 ### Protection against Infinite Loops
 The testbench includes "Watchdog" timeouts on `wait until` statements (e.g., `wait until done = '1' for DELAY_TIME * 2`). This ensures that if the hardware fails, the simulation terminates with a failure report instead of hanging.
 
-## 📝 License
-
-This project is provided as-is for educational purposes.
 
 ## 👤 Author
 
@@ -410,9 +407,3 @@ Created as part of a VHDL design and verification exercise demonstrating:
 - CI/CD integration for hardware projects
 - Formal verification techniques
 
-## 📚 References
-
-- [VUnit Documentation](https://vunit.github.io/)
-- [GHDL Documentation](https://ghdl.github.io/ghdl/)
-- [SymbiYosys Documentation](https://symbiyosys.readthedocs.io/)
-- [IEEE VHDL Standard](https://standards.ieee.org/standard/1076-2019.html)
