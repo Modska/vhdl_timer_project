@@ -27,68 +27,55 @@ jobs:
   # Job 2: Formal verification with SymbiYosys (Stretch Goal)
   formal:
     runs-on: ubuntu-latest
-    continue-on-error: true  # Don't fail CI if formal verification has issues
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ghdl
+      
       - name: Install OSS CAD Suite
         run: |
-          # Download latest OSS CAD Suite
           wget -q https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2024-12-18/oss-cad-suite-linux-x64-20241218.tgz
           tar -xzf oss-cad-suite-linux-x64-20241218.tgz
-      
-      - name: Verify Installation
-        run: |
-          source oss-cad-suite/environment
-          which sby
-          ghdl --version
-          yosys --version
       
       - name: Run Formal Verification - BMC
         continue-on-error: true
         run: |
           source oss-cad-suite/environment
           cd formal
-          timeout 300 sby -f timer.sby bmc || echo "BMC completed with status $?"
+          sby -f timer.sby bmc
       
       - name: Run Formal Verification - Prove
         continue-on-error: true
         run: |
           source oss-cad-suite/environment
           cd formal
-          timeout 300 sby -f timer.sby prove || echo "Prove completed with status $?"
+          sby -f timer.sby prove
       
       - name: Run Formal Verification - Cover
         continue-on-error: true
         run: |
           source oss-cad-suite/environment
           cd formal
-          timeout 300 sby -f timer.sby cover || echo "Cover completed with status $?"
+          sby -f timer.sby cover
       
-      - name: Check Results
+      - name: Check Status
         run: |
           cd formal
-          if [ -f timer_bmc/status ]; then
-            echo "BMC Status: $(cat timer_bmc/status)"
-          fi
-          if [ -f timer_prove/status ]; then
-            echo "Prove Status: $(cat timer_prove/status)"
-          fi
-          if [ -f timer_cover/status ]; then
-            echo "Cover Status: $(cat timer_cover/status)"
-          fi
+          [ -f timer_bmc/status ] && echo "BMC: $(cat timer_bmc/status)"
+          [ -f timer_prove/status ] && echo "Prove: $(cat timer_prove/status)"
       
       - name: Upload Formal Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: formal-verification-results
-          path: |
-            formal/timer_bmc/
-            formal/timer_prove/
-            formal/timer_cover/
+          path: formal/timer_*/
 
-  # Job 3: Generate summary report
+  # Job 3: Summary Report
   report:
     needs: [simulation, formal]
     runs-on: ubuntu-latest
@@ -101,18 +88,24 @@ jobs:
       
       - name: Generate Summary
         run: |
-          echo "# Verification Summary" >> $GITHUB_STEP_SUMMARY
+          echo "# 📋 Project Verification Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Simulation Tests" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 🧪 VUnit Simulation" >> $GITHUB_STEP_SUMMARY
           if [ -d "vunit-test-results" ]; then
-            echo "✅ VUnit tests completed" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Simulation completed successfully." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ VUnit tests failed" >> $GITHUB_STEP_SUMMARY
+            echo "❌ Simulation results missing." >> $GITHUB_STEP_SUMMARY
           fi
+          
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Formal Verification" >> $GITHUB_STEP_SUMMARY
+          echo "## 🛡️ Formal Verification" >> $GITHUB_STEP_SUMMARY
           if [ -d "formal-verification-results" ]; then
-            echo "✅ Formal verification completed" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Formal results available." >> $GITHUB_STEP_SUMMARY
+            # Affiche le statut BMC si disponible
+            if [ -f "formal-verification-results/timer_bmc/status" ]; then
+               echo "**BMC Status:** $(cat formal-verification-results/timer_bmc/status)" >> $GITHUB_STEP_SUMMARY
+            fi
           else
-            echo "❌ Formal verification failed" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Formal results not found." >> $GITHUB_STEP_SUMMARY
           fi

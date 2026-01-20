@@ -13,7 +13,9 @@ depth 20
 smtbmc
 
 [script]
-# Note the path change here as well for GHDL
+# On charge explicitement le plugin ghdl pour Yosys
+plugin load ghdl
+# Compilation VHDL-2008
 ghdl --std=08 ../src/timer.vhd timer_formal.vhd -e timer_formal
 prep -top timer_formal
 
