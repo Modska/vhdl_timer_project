@@ -124,9 +124,9 @@ begin
                 -- Then we wait for the falling edge to be sure logic has propagated
                 wait until falling_edge(clk); 
         
-        check(done = '0', "Timer should have restarted immediately with continuous start");
-        start <= '0'; 
-    end if;
+                check(done = '0', "Timer should have restarted immediately with continuous start");
+                start <= '0'; 
+                end if;
             -- EDGE CASE: Very Short Delay (Minimum cycles)
             elsif run("Test_Minimum_Non_Zero_Delay") then
             -- This test is specifically relevant when DELAY_TIME is very small
@@ -149,6 +149,36 @@ begin
             else
                 info("Skipping Minimal_Delay test: DELAY_TIME is too large for this specific edge case.");
             end if;
+            
+            elsif run("Test_Timer_Ignore_Extra_Start") then
+                if DELAY_TIME > 50 ns then
+                -- Initialisation
+                rst <= '1'; wait for 100 ns; rst <= '0';
+                wait until rising_edge(clk);
+        
+                -- PREMIER LANCEMENT
+                start <= '1'; wait until rising_edge(clk); start <= '0';
+                start_time := now; -- On commence la mesure ICI
+        
+                -- Attendre que le timer soit bien en train de compter
+                wait until done = '0'; 
+        
+                -- ENVOI D'UN START PARASITE (pendant le comptage)
+                wait for DELAY_TIME / 4;
+                start <= '1'; wait until rising_edge(clk); start <= '0';
+        
+                -- ATTENTE DU SIGNAL DONE AVEC PROTECTION
+                wait until done = '1' for DELAY_TIME * 2;
+        
+                -- VERIFICATIONS
+                check(done = '1', "Timer got stuck after extra start pulse!");
+        
+                -- Si le timer a ignoré le 2ème start, la durée doit être ~DELAY_TIME
+                -- Si le timer a redémarré, la durée sera ~1.25 * DELAY_TIME
+                check(abs((now - start_time) - DELAY_TIME) < (CLK_PERIOD * 3 / 4), 
+                    "Timer restarted or shifted! Measured: " & to_string(now - start_time) & 
+                    " Expected: " & to_string(DELAY_TIME));
+                end if;
         end if;
             
 
