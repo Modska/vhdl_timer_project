@@ -30,50 +30,24 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ghdl
-      
+
       - name: Install OSS CAD Suite
         run: |
           wget -q https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2024-12-18/oss-cad-suite-linux-x64-20241218.tgz
           tar -xzf oss-cad-suite-linux-x64-20241218.tgz
-      
-      - name: Run Formal Verification - BMC
-        continue-on-error: true
+
+      - name: Run Formal Verification
         run: |
-          source oss-cad-suite/environment
+          # On ajoute la suite au PATH proprement pour tout le shell
+          export PATH=$GITHUB_WORKSPACE/oss-cad-suite/bin:$PATH
+          # On force Yosys à utiliser son propre plugin GHDL
+          export YOSYS_GHDL=ghdl
+          
           cd formal
-          sby -f timer.sby bmc
-      
-      - name: Run Formal Verification - Prove
-        continue-on-error: true
-        run: |
-          source oss-cad-suite/environment
-          cd formal
+          # On lance les tâches. Si sby échoue, on affiche le log d'erreur de Yosys
+          sby -f timer.sby bmc || (cat timer_bmc/model/design.log && exit 1)
           sby -f timer.sby prove
-      
-      - name: Run Formal Verification - Cover
-        continue-on-error: true
-        run: |
-          source oss-cad-suite/environment
-          cd formal
           sby -f timer.sby cover
-      
-      - name: Check Status
-        run: |
-          cd formal
-          [ -f timer_bmc/status ] && echo "BMC: $(cat timer_bmc/status)"
-          [ -f timer_prove/status ] && echo "Prove: $(cat timer_prove/status)"
-      
-      - name: Upload Formal Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: formal-verification-results
-          path: formal/timer_*/
 
   # Job 3: Summary Report
   report:

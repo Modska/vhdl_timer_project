@@ -13,7 +13,9 @@ depth 25
 smtbmc
 
 [script]
-ghdl --std=08 timer.vhd timer_formal.vhd -e timer_formal
+# On utilise la syntaxe native de Yosys pour appeler GHDL
+read_ghdl --std=08 timer.vhd timer_formal.vhd
+# On définit l'entité de haut niveau du wrapper
 prep -top timer_formal
 
 [files]
