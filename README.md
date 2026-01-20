@@ -48,7 +48,9 @@ vhdl_timer_project/
 ├── .github/
 │   └── workflows/
 │       └── main.yml           # GitHub Actions CI pipeline
+├── AIUsage.md                 # explaining the ai Usage
 └── README.md                  # This file
+
 ```
 
 ## 🚀 Getting Started
@@ -193,7 +195,7 @@ done_o   ‾‾‾‾‾‾‾‾‾|_______________|‾‾‾‾‾‾‾‾‾
 The timer calculates required cycles using:
 
 ```vhdl
-CYCLES_TO_COUNT = round(clk_freq_hz_g × delay_g)
+CYCLES_TO_COUNT = clk_freq_hz_g × delay_g
 ```
 
 **Example:**
