@@ -1,23 +1,19 @@
-[tasks]
-bmc
-cover
-
 [options]
-bmc: mode bmc
-bmc: depth 30
-
-cover: mode cover  
-cover: depth 20
+mode prove
+depth 20
 
 [engines]
-bmc: smtbmc boolector
-cover: smtbmc boolector
+smtbmc
 
 [script]
-# Read VHDL files
-ghdl --std=08 ../src/timer.vhd timer_formal.vhd -e timer_formal
+# Compilation des fichiers VHDL avec GHDL
+ghdl --std=08 ../timer.vhd timer_formal.vhd -e timer_formal
+
+# Préparation pour le solveur
 prep -top timer_formal
 
 [files]
-../src/timer.vhd
+# Chemin relatif vers le code source original
+../timer.vhd
+# Le wrapper créé ci-dessus
 timer_formal.vhd

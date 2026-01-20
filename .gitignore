@@ -1,4 +1,63 @@
+# VUnit generated files
 vunit_out/
-__pycache__/
-*.cf
+*.vunit_out
+
+# GHDL compiled files
 *.o
+*.cf
+work-obj*.cf
+e~*.o
+
+# Waveform files
+*.vcd
+*.ghw
+*.fst
+
+# SymbiYosys formal verification outputs
+formal/timer_bmc/
+formal/timer_prove/
+formal/timer_cover/
+formal/*.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.backup

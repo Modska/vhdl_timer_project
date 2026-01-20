@@ -2,149 +2,79 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
--- Formal verification wrapper for timer
--- Uses simple assertions compatible with GHDL-Yosys
 entity timer_formal is
+    -- On définit des génériques fixes pour la preuve formelle
+    -- 10 Hz et 500 ms = 5 cycles d'horloge. C'est suffisant pour prouver la logique.
     generic (
-        -- Use small values for formal verification
-        clk_freq_hz_g : natural := 1000;  -- 1 kHz
-        delay_g       : time    := 10 us  -- 10 cycles at 1 kHz
+        g_clk_freq : natural := 10;
+        g_delay    : time    := 500 ms
     );
-end entity timer_formal;
+    port (
+        clk_i   : in std_logic;
+        arst_i  : in std_logic;
+        start_i : in std_logic;
+        done_o  : out std_logic
+    );
+end entity;
 
 architecture formal of timer_formal is
-    signal clk   : std_ulogic := '0';
-    signal rst   : std_ulogic;
-    signal start : std_ulogic;
-    signal done  : std_ulogic;
     
-    -- Track state for assertions
-    signal prev_done : std_ulogic := '1';
-    signal started : std_ulogic := '0';
-    signal cycle_count : natural := 0;
-    
-    -- Calculate expected cycles
-    function calc_expected_cycles return natural is
-        variable delay_ns : real;
-        variable cycles   : real;
-        variable result   : natural;
-    begin
-        if delay_g = 0 ns then
-            return 0;
-        end if;
-        delay_ns := real(delay_g / 1 ns);
-        cycles := real(clk_freq_hz_g) * (delay_ns / 1.0e9);
-        result := integer(round(cycles));
-        if result = 0 and delay_g > 0 ns then
-            result := 1;
-        end if;
-        return result;
-    end function;
-    
-    constant EXPECTED_CYCLES : natural := calc_expected_cycles;
-    
+    -- Constante locale correspondant au calcul interne du DUT
+    -- 10 Hz * 0.5s = 5 cycles
+    constant C_CYCLES : natural := 5; 
+
 begin
-    -- DUT instantiation
-    dut: entity work.timer
+
+    -- Instanciation du Design Under Test (DUT)
+    -- On mappe les génériques pour forcer une petite valeur de comptage
+    i_dut : entity work.timer
         generic map (
-            clk_freq_hz_g => clk_freq_hz_g,
-            delay_g       => delay_g
+            clk_freq_hz_g => g_clk_freq,
+            delay_g       => g_delay
         )
         port map (
-            clk_i   => clk,
-            arst_i  => rst,
-            start_i => start,
-            done_o  => done
+            clk_i   => clk_i,
+            arst_i  => arst_i,
+            start_i => start_i,
+            done_o  => done_o
         );
-    
-    -- Tracking process
-    process(clk, rst)
-    begin
-        if rst = '1' then
-            prev_done <= '1';
-            started <= '0';
-            cycle_count <= 0;
-        elsif rising_edge(clk) then
-            prev_done <= done;
-            
-            -- Detect start of counting
-            if done = '1' and prev_done = '1' and start = '1' and EXPECTED_CYCLES > 0 then
-                started <= '1';
-                cycle_count <= 0;
-            elsif started = '1' and done = '0' then
-                cycle_count <= cycle_count + 1;
-            elsif started = '1' and done = '1' then
-                started <= '0';
-            end if;
-        end if;
-    end process;
-    
-    -- ========================================================================
-    -- FORMAL ASSERTIONS
-    -- ========================================================================
-    
-    -- Property 1: Reset forces done high
-    process(clk)
-    begin
-        if rising_edge(clk) then
-            if rst = '1' then
-                assert done = '1' 
-                    report "After reset, done must be high"
-                    severity failure;
-            end if;
-        end if;
-    end process;
-    
-    -- Property 2: When idle and no start, done stays high
-    process(clk)
-    begin
-        if rising_edge(clk) then
-            if rst = '0' and prev_done = '1' and done = '1' and start = '0' then
-                assert done = '1'
-                    report "Done should stay high when idle"
-                    severity failure;
-            end if;
-        end if;
-    end process;
-    
-    -- Property 3: Start causes done to go low (if cycles > 0)
-    process(clk)
-    begin
-        if rising_edge(clk) then
-            if rst = '0' and EXPECTED_CYCLES > 0 then
-                if prev_done = '1' and start = '1' then
-                    -- Next cycle, done should be low
-                    -- (checked in next clock cycle via prev_done)
-                end if;
-            end if;
-        end if;
-    end process;
-    
-    -- Property 4: Correct cycle count
-    -- When counting finishes, verify it took the right number of cycles
-    process(clk)
-    begin
-        if rising_edge(clk) then
-            if rst = '0' and started = '1' and prev_done = '0' and done = '1' then
-                assert cycle_count = EXPECTED_CYCLES
-                    report "Incorrect cycle count: expected " & 
-                           integer'image(EXPECTED_CYCLES) & " got " & 
-                           integer'image(cycle_count)
-                    severity failure;
-            end if;
-        end if;
-    end process;
-    
-    -- Property 5: Zero delay means done stays high
-    process(clk)
-    begin
-        if rising_edge(clk) then
-            if EXPECTED_CYCLES = 0 then
-                assert done = '1'
-                    report "For zero delay, done must always be high"
-                    severity failure;
-            end if;
-        end if;
-    end process;
 
-end architecture formal;
+    -- =========================================================
+    -- PROPRIÉTÉS PSL (Property Specification Language)
+    -- =========================================================
+    -- psl default clock is rising_edge(clk_i);
+
+    -- 1. RESET CHECK
+    -- Si Reset est actif, done_o doit être à '1' (Idle) immédiatement
+    -- psl assert always (arst_i = '1' -> done_o = '1');
+
+    -- 2. START BEHAVIOR
+    -- Si on est Idle (done_o=1), pas de reset, et qu'on reçoit Start :
+    -- Au cycle suivant, done_o doit passer à '0' (Busy).
+    -- psl assert always (start_i = '1' and done_o = '1' and arst_i = '0' -> next done_o = '0');
+
+    -- 3. DURATION CHECK (Le cœur de la preuve)
+    -- Si on démarre, done_o doit rester à '0' pendant exactement C_CYCLES.
+    -- La syntaxe [*5] signifie "répété 5 fois".
+    -- psl assert always (
+    --     (start_i = '1' and done_o = '1' and arst_i = '0') -> 
+    --     next (done_o = '0' [*5])
+    -- );
+
+    -- 4. COMPLETION CHECK
+    -- Après C_CYCLES d'activité, le timer doit revenir à '1'.
+    -- next[A](B) signifie "dans A cycles, B doit être vrai".
+    -- On ajoute 1 car le done_o remonte au cycle APRES la fin du comptage.
+    -- psl assert always (
+    --     (start_i = '1' and done_o = '1' and arst_i = '0') -> 
+    --     next[6] (done_o = '1')
+    -- );
+
+    -- 5. STABILITY (Ignorer Start pendant le comptage)
+    -- Si on est déjà occupé (done_o=0), un start ne doit rien changer (le compteur ne reset pas).
+    -- C'est implicitement couvert par la propriété de durée, mais on peut vérifier que done_o ne remonte pas trop tôt.
+    -- psl assert always (
+    --     (done_o = '0' and arst_i = '0') -> next done_o = '0' until! count_finished
+    -- );
+
+end architecture;
